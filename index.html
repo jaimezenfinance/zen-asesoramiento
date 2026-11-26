@@ -250,7 +250,7 @@ input::placeholder { color: #c3cbdb; }
 
 <!-- 1. IDENTIFICACIÓN -->
 <div class="card">
-  <div class="card-header"><span class="card-icon">👤</span><span class="card-title">Identificación</span></div>
+  <div class="card-header"><span class="card-icon">👤</span><span class="card-title">Identificación</span><button type="button" onclick="pegarDeMiClickUp()" title="Rellena nombre, teléfono, área y precio objetivo con la llamada copiada en MiClickUp («Copiar para Zen»)" style="margin-left:auto;padding:7px 14px;border-radius:8px;border:1.5px solid var(--salmon);background:var(--salmon-dim);color:#b5502e;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📞 Pegar de MiClickUp</button></div>
   <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1.2fr 1fr;gap:12px;">
     <div class="field"><label>Nombre</label><input autocomplete="off" type="text" id="nombre" placeholder="Nombre completo" autocapitalize="words" oninput="actualizarNombreHeader();capitalizarNombre(this)" style="font-size:19px;font-weight:600;padding:11px 13px"></div>
     <div class="field"><label>Teléfono</label><input autocomplete="off" type="text" id="telefono" placeholder="654-22-22-22" oninput="formatearTelefono(this)" maxlength="26" style="font-size:19px;font-weight:600;padding:11px 13px"></div>
@@ -2774,6 +2774,31 @@ function impParse(text){
   return P;
 }
 
+// ── PEGAR DE MICLICKUP: lee el portapapeles y rellena el Formulario en un clic ──
+async function pegarDeMiClickUp(){
+  let txt='';
+  try{ txt = await navigator.clipboard.readText(); }catch(e){ txt=''; }
+  if(!txt || !txt.trim()){ impOpen(); showAutosaveToast('No he podido leer lo copiado: pégalo aquí con Ctrl+V'); return; }
+  const P = impParse(txt);
+  if(!P.nombre && !P.tel){ showAutosaveToast('Lo copiado no es una llamada de MiClickUp: pulsa «Copiar para Zen» primero'); return; }
+  const vacio = !(v('nombre')||getActiveTitularIds().some(id=>getEmpleos(id).some(e=>e.ing>0)));
+  if(!vacio && !confirm('Se sustituirá todo lo que hay ahora en el Formulario por la llamada de '+(P.nombre||'MiClickUp')+'. ¿Seguir?')) return;
+  impOpen(); document.getElementById('impText').value = txt; impParsed = P; impAplicar(); impClose();
+  showAutosaveToast('✅ Llamada de '+(P.nombre||'MiClickUp')+' cargada');
+}
+// ── ABRIR DESDE MICLICKUP: la llamada llega en el enlace (#mc=…) y se rellena al abrir ──
+function cargarDesdeEnlace(){
+  const h = location.hash || '';
+  if(!h.startsWith('#mc=')) return;
+  let txt=''; try{ txt = decodeURIComponent(h.slice(4)); }catch(e){ txt=''; }
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
+  if(!txt.trim()) return;
+  const P = impParse(txt);
+  if(!P.nombre && !P.tel) return;
+  impOpen(); document.getElementById('impText').value = txt; impParsed = P; impAplicar(); impClose();
+  showAutosaveToast('✅ Llamada de '+(P.nombre||'MiClickUp')+' cargada');
+}
+window.addEventListener('load', ()=>setTimeout(cargarDesdeEnlace, 120));
 function impEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function impEmpleoVacio(e){ return !e.key && !e.ing && !e.antig && !e.pais && !e.sector && !e.pension33; }
 function impTxtEmpleo(e){
