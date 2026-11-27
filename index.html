@@ -2016,7 +2016,7 @@ const CONT_GENERO_MAP = {
   'Funcionario': ['Funcionario','Funcionaria'],
   'Autónomo':    ['Autónomo','Autónoma']
 };
-const CONT_VALUES = ['','Fijo','Discontinuo','Interino','Autónomo','Funcionario','Desempleado','Jubilado','Pensión','Otro'];
+const CONT_VALUES = ['','Fijo','Discontinuo','Interino','Autónomo','Funcionario','Desempleado','Jubilado','Pensión','Alquiler','Otro'];
 
 function updateEcivil(n) {
   const sexo=document.getElementById('sexo'+n).value;
@@ -2078,8 +2078,8 @@ function addEmpleo(t) {
     +'</div>'
     +'<div class="ing-grid">'
     +'<div><label style="font-size:10px">Ingresos (€)</label><input type="text" inputmode="numeric" data-miles id="eIng_'+t+'_'+idx+'" placeholder="1.500" oninput="calcIng()"></div>'
-    +'<div><label style="font-size:10px">Pagas</label><select id="ePagas_'+t+'_'+idx+'" onchange="calcIng()"><option value="12">0 extra (×12)</option><option value="13">1 extra (×13)</option><option value="14">2 extra (×14)</option><option value="15">3 extra (×15)</option><option value="16">4 extra (×16)</option></select></div>'
-    +'<div><label style="font-size:10px">Neto/mes</label><input type="text" data-miles id="eNeto_'+t+'_'+idx+'" readonly style="background:#f5f5f5;color:var(--muted)"></div>'
+    +'<div id="pagasWrap_'+t+'_'+idx+'"><label style="font-size:10px">Pagas</label><select id="ePagas_'+t+'_'+idx+'" onchange="calcIng()"><option value="12">0 extra (×12)</option><option value="13">1 extra (×13)</option><option value="14">2 extra (×14)</option><option value="15">3 extra (×15)</option><option value="16">4 extra (×16)</option></select></div>'
+    +'<div id="netoWrap_'+t+'_'+idx+'"><label style="font-size:10px">Neto/mes</label><input type="text" data-miles id="eNeto_'+t+'_'+idx+'" readonly style="background:#f5f5f5;color:var(--muted)"></div>'
     +'</div>';
   document.getElementById('empleosList'+t).appendChild(div);
   updateEmpleoLabels(t);
@@ -2104,8 +2104,16 @@ function toggleAntiguedad(sel) {
   const card = sel.closest('.empleo-card');
   if(!card) return;
   const c = sel.value;
-  const hideAP  = c==='Desempleado' || c==='Pensión' || c==='Jubilado';
-  const hideSec = c==='Desempleado' || c==='Jubilado' || c==='Pensión';
+  const hideAP  = c==='Desempleado' || c==='Pensión' || c==='Jubilado' || c==='Alquiler';
+  const hideSec = c==='Desempleado' || c==='Jubilado' || c==='Pensión' || c==='Alquiler';
+  const hidePagas = c==='Alquiler';
+  const pagasWrap = card.querySelector('[id^="pagasWrap_"]');
+  if(pagasWrap){
+    pagasWrap.style.visibility = hidePagas ? 'hidden' : '';
+    if(hidePagas){ const ps=pagasWrap.querySelector('select'); if(ps && ps.value!=='12'){ ps.value='12'; if(typeof calcIng==='function') calcIng(); } }
+  }
+  const netoWrap = card.querySelector('[id^="netoWrap_"]');
+  if(netoWrap) netoWrap.style.visibility = hidePagas ? 'hidden' : '';
   const antigWrap = card.querySelector('[id^="antigWrap_"]');
   const paisWrap = card.querySelector('[id^="paisWrap_"]');
   const secWrap = card.querySelector('[id^="sectorWrap_"]');
@@ -2121,11 +2129,11 @@ function getEmpleos(t) {
   return Array.from(document.querySelectorAll('#empleosList'+t+' .empleo-card')).map(card => {
     const parts = card.id.split('_'); const tt=parts[1], idx=parts[2];
     const ing = parseMiles(document.getElementById('eIng_'+tt+'_'+idx)?.value);
-    const pagas = parseInt(document.getElementById('ePagas_'+tt+'_'+idx)?.value)||12;
-    const neto = ing>0 ? Math.round(ing*pagas/12) : 0;
     const contrato = getSelectVal('eContrato_'+tt+'_'+idx, 'eContratoOtro_'+tt+'_'+idx);
-    const sinPaisNiAntig = contrato==='Desempleado' || contrato==='Pensión' || contrato==='Jubilado';
-    const sinSector = contrato==='Desempleado' || contrato==='Jubilado' || contrato==='Pensión';
+    const pagas = contrato==='Alquiler' ? 12 : (parseInt(document.getElementById('ePagas_'+tt+'_'+idx)?.value)||12);
+    const neto = ing>0 ? Math.round(ing*pagas/12) : 0;
+    const sinPaisNiAntig = contrato==='Desempleado' || contrato==='Pensión' || contrato==='Jubilado' || contrato==='Alquiler';
+    const sinSector = contrato==='Desempleado' || contrato==='Jubilado' || contrato==='Pensión' || contrato==='Alquiler';
     const pension33 = contrato==='Pensión' && document.getElementById('ePension_'+tt+'_'+idx)?.value==='33';
     return {
       contrato,
@@ -2637,7 +2645,7 @@ function impParseEmpleoTxt(s){
     if(L===mm.toLowerCase()){ key=k; sexo='m'; break; }
     if(L===ff.toLowerCase()){ key=k; sexo='f'; break; }
   }
-  if(!key){ if(L==='pensión'||L==='pension') key='Pensión'; else if(rest){ key='Otro'; otro=rest; } }
+  if(!key){ if(L==='pensión'||L==='pension') key='Pensión'; else if(L==='alquiler') key='Alquiler'; else if(rest){ key='Otro'; otro=rest; } }
   return { key, otro, sexo, antig, pais, sector, pension33 };
 }
 
